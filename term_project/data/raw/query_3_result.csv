@@ -1,0 +1,11 @@
+model_id,license,params_billion,downloads
+Qwen/Qwen3-0.6B,apache-2.0,0.75,24034480.0
+openai-community/gpt2,mit,0.14,22968298.0
+Qwen/Qwen3-14B,apache-2.0,14.77,11433704.0
+openai/gpt-oss-20b, APACHE-2.0 ,20.91,5891996.0
+Qwen/Qwen2.5-7B-Instruct,apache-2.0,7.62,5859297.0
+deepseek-ai/DeepSeek-V3.2,mit,685.36,5840465.0
+Qwen/Qwen2.5-0.5B-Instruct,apache-2.0,0.49,5222070.0
+facebook/opt-125m,other,,5055896.0
+meta-llama/Llama-3.1-8B-Instruct,llama3.1,8.03,4925442.0
+dphn/dolphin-2.9.1-yi-1.5-34b,apache-2.0,34.39,4673764.0

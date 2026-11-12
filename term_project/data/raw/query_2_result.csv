@@ -1,0 +1,58 @@
+license,total_models,avg_downloads
+ APACHE-2.0 ,63,134430.32
+bigscience-bloom-rail-1.0,9,133568.11
+llama3.2,71,91999.83
+mit,832,81999.53
+openmdw-1.1,25,56913.2
+llama3.1,166,50711.57
+apache-2.0,4029,42301.07
+other,1198,33199.2
+ unknown ,18,24967.83
+ AGPL-3.0 ,1,24943.0
+llama3.3,33,23623.21
+cc-by-sa-4.0,18,21210.17
+llama3,146,13400.35
+Unknown,1273,13311.36
+wtfpl,2,10946.0
+llama2,137,9827.85
+bigcode-openrail-m,19,9571.37
+gemma,246,9454.38
+ MIT ,13,7466.54
+"llama3.3, gemma",2,7148.0
+cc-by-nc-nd-4.0,7,6617.86
+bsd-3-clause,16,6499.06
+ OTHER ,18,6128.28
+ LLAMA3 ,2,6070.0
+cc-by-4.0,54,5846.78
+"llama3.1, gemma",1,5555.0
+ GEMMA ,4,4561.75
+ APPLE-AMLR ,1,4522.0
+openrail,10,4254.8
+cc-by-nc-sa-4.0,26,4011.19
+unknown,5,3857.4
+cc-by-nc-4.0,176,3708.38
+ BIGSCIENCE-BLOOM-RAIL-1.0 ,1,3390.0
+ LLAMA2 ,4,3317.25
+apple-amlr,7,3113.29
+bsl-1.0,1,2845.0
+ BIGCODE-OPENRAIL-M ,1,2369.0
+lgpl,3,2336.67
+gpl-2.0,2,2180.5
+agpl-3.0,3,2018.67
+afl-3.0,3,1970.0
+osl-3.0,4,1875.5
+cc,4,1875.25
+gpl-3.0,13,1637.31
+ CC-BY-NC-SA-4.0 ,1,1481.0
+creativeml-openrail-m,13,1443.0
+ LLAMA3.2 ,2,1383.5
+artistic-2.0,2,1292.5
+cc-by-nd-4.0,1,1281.0
+"gemma, llama3.3",3,1261.67
+bigscience-openrail-m,1,1027.0
+bsd-2-clause,1,999.0
+mpl-2.0,1,990.0
+ GPL-3.0 ,1,838.0
+cc-by-nc-2.0,1,795.0
+gpl,1,781.0
+ LLAMA3.1 ,2,762.0
