@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LEGO Data Explorer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: a filter rail beside a working area. One red/yellow/blue set, used by role: yellow = volume, red = size, blue = secondary measure. */
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --ink:#13202B; --muted:#586878; --line:#DCE2E9;
+  --red:#D01012; --yellow:#F2B705; --blue:#0F6CBD; --warn-bg:#FFF4D6; --warn-ink:#5C4300; --ok:#1D8A57;
+  --font-display:"Space Grotesk",system-ui,sans-serif; --font-body:"Inter",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0D141B; --surface:#16212B; --ink:#E7EDF3; --muted:#97A7B7; --line:#273540;
+  --red:#FF6B66; --yellow:#F7C948; --blue:#56A8F2; --warn-bg:#3A3015; --warn-ink:#F4DFA0; --ok:#4CC38A; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0D141B; --surface:#16212B; --ink:#E7EDF3; --muted:#97A7B7; --line:#273540;
+  --red:#FF6B66; --yellow:#F7C948; --blue:#56A8F2; --warn-bg:#3A3015; --warn-ink:#F4DFA0; --ok:#4CC38A; color-scheme:dark; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+h1{font-size:28px;letter-spacing:-.01em}
+h2{font-size:18px}
+h3{font-size:14px;font-weight:700}
+.sub{color:var(--muted);margin:2px 0 0;max-width:70ch}
+.banner{border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);background:var(--surface)}
+.banner.sample{background:var(--warn-bg);color:var(--warn-ink);border-color:transparent}
+.banner strong{font-weight:600}
+.loader{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:stretch}
+.drop{border:1.5px dashed var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0}
+.drop.over{border-color:var(--blue)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted)}
+.chip.ok{color:var(--ok);border-color:var(--ok)}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--blue)}
+.btn:focus-visible,.tab:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+.rail{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:16px;position:sticky;top:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.field .lab{font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input[type=number],input[type=search]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=range]{width:100%;accent-color:var(--red)}
+.checks{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.checks label{text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--ink);display:flex;gap:8px;align-items:center}
+.linkbtn{background:none;border:0;padding:0;color:var(--blue);font-size:12px;text-align:left;width:fit-content}
+.main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .v{font-family:var(--font-display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.insights ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font-weight:500;color:var(--muted);white-space:nowrap}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--red)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.chartbox{position:relative;height:340px}
+.chartbox.tall{height:440px}
+.q{color:var(--muted);margin:2px 0 12px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right}
+.empty{color:var(--muted);padding:24px 0;text-align:center}
+.note{color:var(--muted);font-size:12px;margin:8px 0 0}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)} .rail{position:static}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .grid2{grid-template-columns:minmax(0,1fr)}
+  .loader{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){ .btn{transition:border-color .15s} }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LEGO Data Explorer</h1>
+    <p class="sub">Sets, themes and minifigures from 1975 to 2025. Everything is computed in your browser from the three CSV files, so your numbers stay yours.</p>
+  </header>
+
+  <div id="banner" class="banner sample" role="status"></div>
+
+  <div class="loader">
+    <label class="drop" id="drop" for="files">
+      <h3>Load your data</h3>
+      <span class="q" style="margin:0">Drop <code>lego_sets_1975_2025.csv</code>, <code>lego_themes_1975_2025.csv</code> and <code>lego_minifigures_1975_2025.csv</code> here, or click to choose all three.</span>
+      <input id="files" type="file" accept=".csv,text/csv" multiple>
+      <div class="chips" id="chips"></div>
+    </label>
+    <button class="btn" id="useSample" type="button">Use sample data</button>
+  </div>
+
+  <div class="layout">
+    <aside class="rail" aria-label="Filters">
+      <h2>Filters</h2>
+      <div class="field">
+        <span class="lab">Release years</span>
+        <div class="row2">
+          <input id="y0" type="number" aria-label="From year">
+          <input id="y1" type="number" aria-label="To year">
+        </div>
+      </div>
+      <div class="field">
+        <span class="lab">Parent theme</span>
+        <div class="checks" id="parents"></div>
+        <button class="linkbtn" id="clearParents" type="button">Clear selection (show all)</button>
+      </div>
+      <div class="field">
+        <label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);display:flex;gap:8px;align-items:center;font-weight:400">
+          <input id="onlyMf" type="checkbox"> Only sets that include minifigures</label>
+      </div>
+      <div class="field">
+        <label for="topN">Themes to show: <span id="topNv">15</span></label>
+        <input id="topN" type="range" min="5" max="30" value="15">
+      </div>
+      <p class="note">Minifigure charts are not linked to sets in the source data, so year and theme filters do not apply to them.</p>
+    </aside>
+
+    <main class="main">
+      <div class="kpis" id="kpis"></div>
+      <section class="card insights" aria-labelledby="insH">
+        <h2 id="insH">What the data says</h2>
+        <ul id="insights"></ul>
+      </section>
+
+      <div class="tabs" role="tablist" id="tabs">
+        <button class="tab" role="tab" id="t-over" aria-controls="p-over" aria-selected="true" data-p="over">Over time</button>
+        <button class="tab" role="tab" id="t-themes" aria-controls="p-themes" aria-selected="false" data-p="themes">Themes and sets</button>
+        <button class="tab" role="tab" id="t-figs" aria-controls="p-figs" aria-selected="false" data-p="figs">Minifigures</button>
+        <button class="tab" role="tab" id="t-quality" aria-controls="p-quality" aria-selected="false" data-p="quality">Data quality</button>
+      </div>
+
+      <section id="p-over" role="tabpanel" aria-labelledby="t-over" class="main">
+        <div class="card"><h2>How has LEGO output changed over time?</h2><p class="q">Sets released each year, with the average number of parts per set.</p>
+          <div class="chartbox"><canvas id="cOver" role="img" aria-label="Sets released per year and average parts per set"></canvas></div></div>
+        <div class="card"><h2>Are sets getting more colorful?</h2><p class="q">Average number of unique colors per set, by year.</p>
+          <div class="chartbox"><canvas id="cColors" role="img" aria-label="Average unique colors per set by year"></canvas></div></div>
+      </section>
+
+      <section id="p-themes" role="tabpanel" aria-labelledby="t-themes" class="main" hidden>
+        <div class="card"><h2>Which themes dominate?</h2><p class="q" id="themesQ"></p>
+          <div class="chartbox tall"><canvas id="cThemes" role="img" aria-label="Top themes by number of sets"></canvas></div></div>
+        <div class="grid2">
+          <div class="card"><h2>Do sets with more minifigures have more parts?</h2><p class="q">Average parts per set, grouped by how many minifigures come in the box.</p>
+            <div class="chartbox"><canvas id="cBuckets" role="img" aria-label="Average parts by minifigure count"></canvas></div></div>
+          <div class="card"><h2>The 10 biggest sets in view</h2><p class="q">Ranked by part count.</p>
+            <div class="tablewrap" id="biggest"></div></div>
+        </div>
+      </section>
+
+      <section id="p-figs" role="tabpanel" aria-labelledby="t-figs" class="main" hidden>
+        <div class="grid2">
+          <div class="card"><h2>When did minifigures take over?</h2><p class="q">Share of sets that include at least one, by decade.</p>
+            <div class="chartbox"><canvas id="cDecades" role="img" aria-label="Share of sets with minifigures by decade"></canvas></div></div>
+          <div class="card"><h2>How many sets does a minifigure appear in?</h2><p class="q">Count of minifigures by number of sets.</p>
+            <div class="chartbox"><canvas id="cAppear" role="img" aria-label="Minifigures grouped by number of sets appeared in"></canvas></div></div>
+        </div>
+        <div class="card"><h2>Search minifigures</h2>
+          <div class="row2" style="max-width:460px;margin:8px 0 12px">
+            <input id="figQ" type="search" placeholder="Name contains, e.g. Darth" aria-label="Search minifigure names">
+            <input id="figN" type="number" min="5" max="200" value="25" aria-label="Rows to show">
+          </div>
+          <div class="tablewrap" id="figTable"></div></div>
+      </section>
+
+      <section id="p-quality" role="tabpanel" aria-labelledby="t-quality" class="main" hidden>
+        <div class="card"><h2>What the cleaning step did</h2><p class="q">Applies the same rules as <code>transform.py</code>: trim text, keep valid whole numbers, derive the minifigure flag from the count, drop exact duplicates.</p>
+          <div class="tablewrap" id="quality"></div></div>
+        <div class="card"><h2>Do the themes table and the sets table agree?</h2>
+          <p class="q">Each theme claims a <code>total_sets</code>. This compares that claim with the sets actually present, both summed per theme group before they are compared.</p>
+          <div class="kpis" id="reconK" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:12px"></div>
+          <div class="chartbox"><canvas id="cRecon" role="img" aria-label="Largest differences between declared and counted sets"></canvas></div>
+          <div class="tablewrap" id="reconT" style="margin-top:12px"></div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const num = n => (Number.isFinite(n) ? Math.round(n).toLocaleString() : "–");
+const pct = n => (Number.isFinite(n) ? Math.round(n * 100) + "%" : "–");
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- CSV parsing (quotes, CRLF, embedded commas) ---------- */
+function parseCSV(text) {
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(cur); cur = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cur); cur = ""; if (row.length > 1 || row[0] !== "") rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.replace(/^﻿/, "").trim());
+  return { head, rows: rows.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ""]))) };
+}
+
+/* ---------- cleaning, mirroring transform.py ---------- */
+const cleanText = v => { if (v == null) return null; const t = String(v).trim().replace(/\s+/g, " "); return t === "" ? null : t; };
+const cleanInt = v => { if (v == null || String(v).trim() === "") return null; const n = Number(v); return Number.isFinite(n) && n >= 0 && Number.isInteger(n) ? n : null; };
+const cleanBool = v => { const t = String(v ?? "").trim().toLowerCase(); return t === "true" ? true : t === "false" ? false : null; };
+
+function dedupe(rows) {
+  const seen = new Set(), out = []; let dups = 0;
+  for (const r of rows) { const k = JSON.stringify(r); if (seen.has(k)) dups++; else { seen.add(k); out.push(r); } }
+  return { out, dups };
+}
+function countMissing(rows, cols) { const m = {}; cols.forEach(c => (m[c] = rows.filter(r => r[c] == null).length)); return m; }
+
+function prepSets(raw) {
+  const { out, dups } = dedupe(raw);
+  const rows = out.map(r => {
+    const s = { set_num: cleanText(r.set_num), name: cleanText(r.name) ?? "Unknown", year: cleanInt(r.year),
+      theme_name: cleanText(r.theme_name), parent_theme: cleanText(r.parent_theme), num_parts: cleanInt(r.num_parts),
+      num_minifigs: cleanInt(r.num_minifigs), num_unique_colors: cleanInt(r.num_unique_colors), has_minifigs: cleanBool(r.has_minifigs) };
+    if (s.num_minifigs !== null) s.has_minifigs = s.num_minifigs > 0;
+    return s;
+  });
+  return { rows, q: { received: raw.length, after: rows.length, dups, missing: countMissing(rows, ["year", "num_parts", "num_minifigs", "num_unique_colors", "has_minifigs", "theme_name", "parent_theme"]) } };
+}
+function prepThemes(raw) {
+  const { out, dups } = dedupe(raw);
+  const rows = out.map(r => ({ id: cleanInt(r.id), theme_name: cleanText(r.theme_name), parent_theme: cleanText(r.parent_theme), total_sets: cleanInt(r.total_sets) }));
+  return { rows, q: { received: raw.length, after: rows.length, dups, missing: countMissing(rows, ["id", "total_sets", "theme_name", "parent_theme"]) } };
+}
+function prepFigs(raw) {
+  const { out, dups } = dedupe(raw);
+  const rows = out.map(r => ({ fig_num: cleanText(r.fig_num), name: cleanText(r.name) ?? "Unknown", num_parts: cleanInt(r.num_parts), total_sets_appeared: cleanInt(r.total_sets_appeared) }));
+  return { rows, q: { received: raw.length, after: rows.length, dups, missing: countMissing(rows, ["fig_num", "num_parts", "total_sets_appeared"]) } };
+}
+
+/* ---------- sample data (synthetic, generated here) ---------- */
+function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function makeSample() {
+  const r = rng(42), parents = ["Licensed", "Seasonal", "Town", "Space", "Educational and Dacta", "Technic", "Creator", "Castle", "Miscellaneous"];
+  const groups = [];
+  parents.forEach(p => { const k = 3 + Math.floor(r() * 5); for (let i = 0; i < k; i++) groups.push({ theme_name: i === 0 ? p : `${p} sample ${i}`, parent_theme: p, w: 0.3 + r() * 2 }); });
+  groups.push({ theme_name: "Seasonal sample", parent_theme: "Seasonal", w: 0.5 });
+  const totalW = groups.reduce((a, g) => a + g.w, 0), n = 3200, counts = new Map(), sets = [];
+  for (let i = 0; i < n; i++) {
+    let x = r() * totalW, g = groups[0]; for (const c of groups) { x -= c.w; if (x <= 0) { g = c; break; } }
+    const year = 1975 + Math.floor(Math.pow(r(), 0.7) * 51), growth = 1 + (year - 1975) / 35;
+    const parts = Math.max(2, Math.min(11000, Math.round(Math.exp(4.4 + r() * 1.6) * growth)));
+    const mf = Math.max(0, Math.round(((year - 1975) / 11) * (0.2 + r() * 1.6) - 0.8));
+    sets.push({ set_num: `${10000 + i}-1`, name: `Sample set ${i + 1}`, year: String(Math.min(year, 2025)), theme_name: g.theme_name, parent_theme: g.parent_theme,
+      num_parts: String(parts), num_minifigs: String(mf), num_unique_colors: String(Math.max(1, Math.round(Math.pow(parts, 0.36)))), has_minifigs: mf > 0 ? "True" : "False" });
+    const k = g.theme_name + "||" + g.parent_theme; counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  const themes = []; let id = 1;
+  groups.forEach(g => { const c = counts.get(g.theme_name + "||" + g.parent_theme) || 0; const off = r() < 0.15 ? Math.round((r() - 0.5) * 20) : 0;
+    themes.push({ id: String(id++), theme_name: g.theme_name, parent_theme: g.parent_theme, total_sets: String(Math.max(0, c + off)) }); });
+  const s2 = themes.filter(t => t.theme_name === "Seasonal sample"); if (s2.length === 2) { const t = +s2[0].total_sets + +s2[1].total_sets; s2[0].total_sets = String(Math.ceil(t * .8)); s2[1].total_sets = String(Math.floor(t * .2)); }
+  const names = ["Pilot", "Knight", "Wizard", "Astronaut", "Chef", "Builder", "Pirate", "Robot"], figs = [];
+  for (let i = 0; i < 2500; i++) figs.push({ fig_num: `fig-${String(i).padStart(5, "0")}`, name: `Sample ${names[Math.floor(r() * names.length)]} ${i + 1}`, num_parts: String(2 + Math.floor(r() * 6)), total_sets_appeared: String(Math.min(250, Math.max(1, Math.floor(Math.pow(1 / (1 - r() * 0.97), 1.15))))) });
+  return { sets, themes, figs };
+}
+
+/* ---------- state ---------- */
+const S = { sets: [], themes: [], figs: [], quality: {}, source: "sample", labels: [], loaded: {}, active: "over", charts: {} };
+
+function setData(raw, source, labels) {
+  const a = prepSets(raw.sets), b = prepThemes(raw.themes), c = prepFigs(raw.figs);
+  S.sets = a.rows; S.themes = b.rows; S.figs = c.rows; S.quality = { sets: a.q, themes: b.q, minifigures: c.q };
+  S.source = source; S.labels = labels;
+  const years = S.sets.map(s => s.year).filter(y => y != null);
+  S.yMin = Math.min(...years); S.yMax = Math.max(...years);
+  $("#y0").min = $("#y1").min = S.yMin; $("#y0").max = $("#y1").max = S.yMax; $("#y0").value = S.yMin; $("#y1").value = S.yMax;
+  const parents = [...new Set(S.themes.map(t => t.parent_theme).filter(Boolean))].sort();
+  $("#parents").innerHTML = parents.map((p, i) => `<label><input type="checkbox" value="${esc(p)}" id="pt${i}"> ${esc(p)}</label>`).join("");
+  S.groups = new Map(); S.themes.forEach(t => { if (t.theme_name && t.parent_theme) S.groups.set(t.theme_name + "||" + t.parent_theme, { theme_name: t.theme_name, parent_theme: t.parent_theme }); });
+  paintBanner(); render();
+}
+function paintBanner() {
+  const b = $("#banner");
+  if (S.source === "sample") { b.className = "banner sample"; b.innerHTML = "<strong>Sample data.</strong> These numbers are synthetic and generated in your browser. None of them are real LEGO figures. Load your three CSV files above to see the real picture."; }
+  else { b.className = "banner"; b.innerHTML = `<strong>Your data.</strong> ${esc(S.labels.join(", "))}. ${num(S.sets.length)} sets, ${num(S.themes.length)} themes, ${num(S.figs.length)} minifigures after cleaning.`; }
+}
+
+/* ---------- filtering and aggregation ---------- */
+function filters() {
+  const y0 = +$("#y0").value || S.yMin, y1 = +$("#y1").value || S.yMax;
+  const parents = new Set([...document.querySelectorAll("#parents input:checked")].map(i => i.value));
+  return { y0: Math.min(y0, y1), y1: Math.max(y0, y1), parents, mf: $("#onlyMf").checked, topN: +$("#topN").value };
+}
+const avg = (sum, n) => (n ? sum / n : NaN);
+function compute() {
+  const f = filters();
+  const sets = S.sets.filter(s => s.year != null && s.year >= f.y0 && s.year <= f.y1 && (!f.parents.size || f.parents.has(s.parent_theme)) && (!f.mf || s.has_minifigs === true));
+  const D = { f, sets };
+  const ym = new Map();
+  sets.forEach(s => { const o = ym.get(s.year) || { n: 0, p: 0, pn: 0, c: 0, cn: 0 }; o.n++; if (s.num_parts != null) { o.p += s.num_parts; o.pn++; } if (s.num_unique_colors != null) { o.c += s.num_unique_colors; o.cn++; } ym.set(s.year, o); });
+  D.yearly = [...ym.entries()].sort((a, b) => a[0] - b[0]).map(([year, o]) => ({ year, n: o.n, parts: avg(o.p, o.pn), colors: avg(o.c, o.cn) }));
+  const tm = new Map();
+  sets.forEach(s => { const k = s.theme_name + "||" + s.parent_theme; if (!S.groups.has(k)) return; const o = tm.get(k) || { n: 0, p: 0, pn: 0 }; o.n++; if (s.num_parts != null) { o.p += s.num_parts; o.pn++; } tm.set(k, o); });
+  D.themes = [...tm.entries()].map(([k, o]) => ({ ...S.groups.get(k), n: o.n, parts: avg(o.p, o.pn) })).sort((a, b) => b.n - a.n || a.theme_name.localeCompare(b.theme_name)).slice(0, f.topN);
+  D.biggest = sets.filter(s => s.num_parts != null).sort((a, b) => b.num_parts - a.num_parts).slice(0, 10);
+  const bucket = m => (m === 0 ? "0" : m === 1 ? "1" : m <= 3 ? "2-3" : m <= 6 ? "4-6" : "7+"), bm = new Map();
+  sets.filter(s => s.num_minifigs != null).forEach(s => { const k = bucket(s.num_minifigs), o = bm.get(k) || { n: 0, p: 0, pn: 0 }; o.n++; if (s.num_parts != null) { o.p += s.num_parts; o.pn++; } bm.set(k, o); });
+  D.buckets = ["0", "1", "2-3", "4-6", "7+"].filter(k => bm.has(k)).map(k => ({ k, n: bm.get(k).n, parts: avg(bm.get(k).p, bm.get(k).pn) }));
+  const dm = new Map();
+  sets.filter(s => s.has_minifigs != null).forEach(s => { const d = Math.floor(s.year / 10) * 10, o = dm.get(d) || { n: 0, y: 0 }; o.n++; if (s.has_minifigs) o.y++; dm.set(d, o); });
+  D.decades = [...dm.entries()].sort((a, b) => a[0] - b[0]).map(([d, o]) => ({ d, n: o.n, share: o.y / o.n }));
+  const am = { "1 set": 0, "2-5 sets": 0, "6-20 sets": 0, "21+ sets": 0 };
+  S.figs.filter(m => m.total_sets_appeared != null).forEach(m => { const t = m.total_sets_appeared; am[t === 1 ? "1 set" : t <= 5 ? "2-5 sets" : t <= 20 ? "6-20 sets" : "21+ sets"]++; });
+  D.appear = am;
+  const counted = new Map(); S.sets.forEach(s => { const k = s.theme_name + "||" + s.parent_theme; counted.set(k, (counted.get(k) || 0) + 1); });
+  const declared = new Map(); S.themes.forEach(t => { const k = t.theme_name + "||" + t.parent_theme; declared.set(k, (declared.get(k) || 0) + (t.total_sets || 0)); });
+  D.recon = [...S.groups.keys()].map(k => ({ ...S.groups.get(k), declared: declared.get(k) || 0, counted: counted.get(k) || 0 })).map(r => ({ ...r, diff: r.counted - r.declared }));
+  const known = new Set(S.groups.keys()); D.orphans = S.sets.filter(s => !known.has(s.theme_name + "||" + s.parent_theme)).length;
+  return D;
+}
+
+/* ---------- render ---------- */
+function render() {
+  const D = compute(); S.D = D;
+  const n = D.sets.length, parts = D.sets.reduce((a, s) => a + (s.num_parts || 0), 0), pn = D.sets.filter(s => s.num_parts != null).length;
+  $("#kpis").innerHTML = [["Sets in view", num(n)], ["Total parts", num(parts)], ["Average parts per set", num(avg(parts, pn))], ["Theme names", num(new Set(D.sets.map(s => s.theme_name)).size)]]
+    .map(([l, v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  $("#topNv").textContent = D.f.topN;
+  $("#themesQ").textContent = `Top ${D.themes.length} themes by number of sets in the current view. Color shows average parts per set.`;
+  const ins = [];
+  if (!n) ins.push("No sets match these filters. Widen the year range or clear the theme selection.");
+  else {
+    const pk = D.yearly.reduce((a, b) => (b.n > a.n ? b : a)); ins.push(`<strong>Busiest year:</strong> ${pk.year}, with ${num(pk.n)} sets released.`);
+    if (D.yearly.length >= 10) { const w = a => { const t = a.reduce((x, y) => x + y.n, 0); return a.reduce((x, y) => x + (Number.isFinite(y.parts) ? y.parts * y.n : 0), 0) / t; };
+      ins.push(`<strong>Sets got bigger:</strong> the first 5 years in view average ${num(w(D.yearly.slice(0, 5)))} parts per set, the last 5 average ${num(w(D.yearly.slice(-5)))}.`); }
+    if (D.themes[0]) ins.push(`<strong>Biggest theme:</strong> ${esc(D.themes[0].theme_name)}, with ${num(D.themes[0].n)} sets.`);
+    if (D.decades.length >= 2) { const a = D.decades[0], z = D.decades[D.decades.length - 1]; ins.push(`<strong>Minifigures became standard:</strong> ${pct(a.share)} of sets in the ${a.d}s include one, against ${pct(z.share)} in the ${z.d}s.`); }
+    const tot = Object.values(D.appear).reduce((a, b) => a + b, 0); if (tot) ins.push(`<strong>Most minifigures are one-offs:</strong> ${pct(D.appear["1 set"] / tot)} appear in exactly one set.`);
+    const bg = D.biggest[0]; if (bg) ins.push(`<strong>Largest set in view:</strong> ${esc(bg.name)} (${bg.year}) with ${num(bg.num_parts)} parts.`);
+  }
+  $("#insights").innerHTML = ins.map(t => `<li>${t}</li>`).join("");
+  tables(D); charts(S.active);
+}
+function table(cols, rows, empty) {
+  if (!rows.length) return `<div class="empty">${esc(empty || "Nothing to show.")}</div>`;
+  return `<table><thead><tr>${cols.map(c => `<th class="${c.n ? "n" : ""}">${esc(c.h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c.n ? "n" : ""}">${c.n ? num(r[c.k]) : esc(r[c.k])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function tables(D) {
+  $("#biggest").innerHTML = table([{ h: "Set", k: "set_num" }, { h: "Name", k: "name" }, { h: "Year", k: "year" }, { h: "Parts", k: "num_parts", n: 1 }, { h: "Minifigs", k: "num_minifigs", n: 1 }],
+    D.biggest.map(s => ({ ...s, year: String(s.year) })), "No sets match these filters.");
+  const q = $("#figQ").value.trim().toLowerCase(), lim = Math.max(5, Math.min(200, +$("#figN").value || 25));
+  const figs = S.figs.filter(m => m.name.toLowerCase().includes(q)).sort((a, b) => (b.total_sets_appeared ?? -1) - (a.total_sets_appeared ?? -1)).slice(0, lim);
+  $("#figTable").innerHTML = table([{ h: "Figure", k: "fig_num" }, { h: "Name", k: "name" }, { h: "Parts", k: "num_parts", n: 1 }, { h: "Sets appeared in", k: "total_sets_appeared", n: 1 }], figs, "No minifigure matches that search.");
+  const qr = Object.entries(S.quality).map(([t, o]) => ({ table: t, received: o.received, after: o.after, dups: o.dups, missing: Object.entries(o.missing).filter(([, v]) => v > 0).map(([k, v]) => `${k}: ${num(v)}`).join(", ") || "none" }));
+  $("#quality").innerHTML = table([{ h: "Table", k: "table" }, { h: "Rows received", k: "received", n: 1 }, { h: "Rows after cleaning", k: "after", n: 1 }, { h: "Duplicates removed", k: "dups", n: 1 }, { h: "Missing after cleaning", k: "missing" }], qr);
+  const agree = D.recon.filter(r => r.diff === 0).length;
+  $("#reconK").innerHTML = [["Theme groups", num(D.recon.length)], ["Counts agree", num(agree)], ["Counts differ", num(D.recon.length - agree)]].map(([l, v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const off = D.recon.filter(r => r.diff !== 0).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 15); D.off = off;
+  $("#reconT").innerHTML = (D.orphans ? `<p class="note">${num(D.orphans)} sets have a theme and parent theme with no match in the themes table.</p>` : "") +
+    table([{ h: "Theme", k: "theme_name" }, { h: "Parent theme", k: "parent_theme" }, { h: "Declared", k: "declared", n: 1 }, { h: "Counted", k: "counted", n: 1 }, { h: "Difference", k: "diff", n: 1 }], off, "Every theme's declared total matches the sets table.");
+}
+function mk(id, cfg) {
+  if (typeof Chart === "undefined") { const c = $("#" + id); if (c) c.parentElement.innerHTML = '<div class="empty">The chart library could not be loaded. Check your connection and reload.</div>'; return; }
+  if (S.charts[id]) S.charts[id].destroy();
+  const el = $("#" + id); if (!el) return; S.charts[id] = new Chart(el, cfg);
+}
+function base(extra = {}) {
+  const txt = css("--muted"), grid = css("--line");
+  return { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { labels: { color: txt } }, tooltip: { mode: "index", intersect: false } },
+    scales: { x: { ticks: { color: txt }, grid: { color: grid } }, y: { ticks: { color: txt }, grid: { color: grid } } }, ...extra };
+}
+function axisTitle(t) { return { display: true, text: t, color: css("--muted") }; }
+function charts(which) {
+  const D = S.D, red = css("--red"), yellow = css("--yellow"), blue = css("--blue");
+  if (typeof Chart !== "undefined") { Chart.defaults.font.family = css("--font-body") || "system-ui"; }
+  if (which === "over") {
+    const o = base(); o.scales.y.title = axisTitle("Sets released"); o.scales.y.beginAtZero = true;
+    o.scales.y1 = { position: "right", ticks: { color: css("--muted") }, grid: { drawOnChartArea: false }, title: axisTitle("Average parts per set") };
+    mk("cOver", { type: "bar", data: { labels: D.yearly.map(y => y.year), datasets: [
+      { type: "bar", label: "Sets released", data: D.yearly.map(y => y.n), backgroundColor: yellow, yAxisID: "y" },
+      { type: "line", label: "Average parts per set", data: D.yearly.map(y => (Number.isFinite(y.parts) ? Math.round(y.parts) : null)), borderColor: red, backgroundColor: red, yAxisID: "y1", tension: .25, pointRadius: 2, borderWidth: 2.5 }] }, options: o });
+    const c = base({ plugins: { legend: { display: false } } }); c.scales.y.title = axisTitle("Average unique colors");
+    mk("cColors", { type: "line", data: { labels: D.yearly.map(y => y.year), datasets: [{ label: "Average unique colors", data: D.yearly.map(y => (Number.isFinite(y.colors) ? +y.colors.toFixed(2) : null)), borderColor: blue, backgroundColor: blue, tension: .25, pointRadius: 2, borderWidth: 2.5 }] }, options: c });
+  }
+  if (which === "themes") {
+    const o = base({ indexAxis: "y", plugins: { legend: { display: false } } }); o.scales.x.title = axisTitle("Sets");
+    const pv = D.themes.map(t => t.parts).filter(Number.isFinite), mn = Math.min(...pv, Infinity), mx = Math.max(...pv, -Infinity);
+    const shade = v => { const a = mx > mn && Number.isFinite(v) ? (v - mn) / (mx - mn) : 0.5; return `color-mix(in srgb, ${red} ${Math.round(25 + a * 75)}%, ${yellow})`; };
+    const label = t => (t.theme_name === t.parent_theme ? t.theme_name : `${t.theme_name} (${t.parent_theme})`);
+    mk("cThemes", { type: "bar", data: { labels: D.themes.map(label), datasets: [{ label: "Sets", data: D.themes.map(t => t.n), backgroundColor: D.themes.map(t => shade(t.parts)) }] },
+      options: { ...o, plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: i => `Avg parts: ${num(D.themes[i.dataIndex].parts)}` } } } } });
+    const b = base({ plugins: { legend: { display: false } } }); b.scales.y.title = axisTitle("Average parts per set"); b.scales.x.title = axisTitle("Minifigures in the set");
+    mk("cBuckets", { type: "bar", data: { labels: D.buckets.map(x => x.k), datasets: [{ label: "Average parts", data: D.buckets.map(x => Math.round(x.parts)), backgroundColor: blue }] }, options: b });
+  }
+  if (which === "figs") {
+    const d = base({ plugins: { legend: { display: false } } }); d.scales.y.min = 0; d.scales.y.max = 1; d.scales.y.ticks.callback = v => Math.round(v * 100) + "%";
+    d.plugins.tooltip = { callbacks: { label: i => `${pct(i.parsed.y)} of ${num(D.decades[i.dataIndex].n)} sets` } };
+    mk("cDecades", { type: "bar", data: { labels: D.decades.map(x => x.d + "s"), datasets: [{ label: "Share of sets", data: D.decades.map(x => +x.share.toFixed(3)), backgroundColor: red }] }, options: d });
+    const a = base({ plugins: { legend: { display: false } } }); a.scales.y.title = axisTitle("Minifigures");
+    mk("cAppear", { type: "bar", data: { labels: Object.keys(D.appear), datasets: [{ label: "Minifigures", data: Object.values(D.appear), backgroundColor: yellow }] }, options: a });
+  }
+  if (which === "quality") {
+    const o = base({ plugins: { legend: { display: false } } }); o.scales.y.title = axisTitle("Counted minus declared");
+    mk("cRecon", { type: "bar", data: { labels: (D.off || []).map(r => r.theme_name), datasets: [{ label: "Difference", data: (D.off || []).map(r => r.diff), backgroundColor: red }] }, options: o });
+  }
+}
+
+/* ---------- events ---------- */
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  S.active = t.dataset.p;
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", String(x === t)));
+  ["over", "themes", "figs", "quality"].forEach(p => ($("#p-" + p).hidden = p !== S.active));
+  charts(S.active);
+}));
+["#y0", "#y1", "#onlyMf", "#topN"].forEach(s => $(s).addEventListener("input", render));
+$("#parents").addEventListener("change", render);
+$("#clearParents").addEventListener("click", () => { document.querySelectorAll("#parents input").forEach(i => (i.checked = false)); render(); });
+["#figQ", "#figN"].forEach(s => $(s).addEventListener("input", () => tables(S.D)));
+$("#useSample").addEventListener("click", () => { S.loaded = {}; paintChips(); setData(makeSample(), "sample", []); });
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+const recolor = () => charts(S.active);
+mq.addEventListener ? mq.addEventListener("change", recolor) : null;
+new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* ---------- file loading ---------- */
+function kind(head) { const h = new Set(head); return h.has("set_num") ? "sets" : h.has("fig_num") ? "figs" : h.has("total_sets") && h.has("theme_name") ? "themes" : null; }
+function paintChips() {
+  $("#chips").innerHTML = [["sets", "Sets"], ["themes", "Themes"], ["figs", "Minifigures"]].map(([k, l]) => S.loaded[k] ? `<span class="chip ok">${l}: ${num(S.loaded[k].rows.length)} rows</span>` : `<span class="chip">${l}: not loaded</span>`).join("");
+}
+async function takeFiles(list) {
+  const bad = [];
+  for (const f of list) {
+    try { const p = parseCSV(await f.text()), k = kind(p.head); if (k) S.loaded[k] = { rows: p.rows, name: f.name }; else bad.push(f.name); } catch (e) { bad.push(f.name); }
+  }
+  paintChips();
+  if (bad.length) $("#banner").innerHTML = `<strong>Skipped:</strong> ${esc(bad.join(", "))} did not look like a LEGO sets, themes or minifigures file.`;
+  if (S.loaded.sets && S.loaded.themes && S.loaded.figs) setData({ sets: S.loaded.sets.rows, themes: S.loaded.themes.rows, figs: S.loaded.figs.rows }, "files", [S.loaded.sets.name, S.loaded.themes.name, S.loaded.figs.name]);
+  else if (!bad.length) $("#banner").innerHTML = "<strong>Almost there.</strong> Add the remaining file(s) shown as not loaded. The sample data stays in view until all three are in.";
+}
+$("#files").addEventListener("change", e => takeFiles([...e.target.files]));
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => takeFiles([...e.dataTransfer.files]));
+
+paintChips();
+setData(makeSample(), "sample", []);
+</script>
+
+</body>
+</html>
