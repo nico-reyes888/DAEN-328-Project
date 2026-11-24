@@ -87,6 +87,12 @@ contains `run_at`, Kaggle `dataset_version`, rows received, and rows written.
 The versioned archive is cached in the named `kaggle_cache` volume, avoiding a
 repeat archive download when that version is already present.
 
+## Archived pre-Docker files
+
+Files from before Docker integration are retained in `archive/` for reference
+only. They are not used in the final version; the Docker-based ETL and Streamlit
+application are the supported final implementation. See [the archive index](archive/README.md).
+
 ## Tests
 
 The tests are included in the ETL image and run with:
