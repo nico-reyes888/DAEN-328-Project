@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  etl:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      KAGGLE_CACHE_DIR: /kaggle-cache
+    volumes:
+      - kaggle_cache:/kaggle-cache
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "etl.py"]
+
+  dashboard:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    ports:
+      - "8501:8501"
+    depends_on:
+      etl:
+        condition: service_completed_successfully
+    command: ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]
+
+volumes:
+  pgdata:
+  kaggle_cache:

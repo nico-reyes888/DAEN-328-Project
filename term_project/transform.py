@@ -1,4 +1,5 @@
 import pandas as pd
+from builtins import ValueError
 
 
 def clean_text_columns(df):
@@ -155,24 +156,40 @@ def transform_data(sets, themes, minifigures):
         "theme_groups": theme_groups
     }
 def print_quality_summary(original_tables, cleaned_tables):
+    numeric_columns = {
+        "sets": {"year", "num_parts", "num_minifigs", "num_unique_colors"},
+        "themes": {"id", "total_sets"},
+        "minifigures": {"num_parts", "total_sets_appeared"},
+    }
+
     for name, original in original_tables.items():
         cleaned = cleaned_tables[name]
-        missing = clean_text_columns(original).isna().sum()
+        normalized_original = clean_text_columns(original)
 
         print(f"\n{name}")
         print("Rows received:", len(original))
         print("Rows after cleaning:", len(cleaned))
         print("Duplicates removed:", len(original) - len(cleaned))
 
-        for column, count in missing.items():
+        for column in original.columns:
+            missing_before = int(normalized_original[column].isna().sum())
+            missing_after = int(cleaned[column].isna().sum())
+
             if column == "name":
                 action = "filled with Unknown"
             elif column in [
                 "set_num", "fig_num", "id",
                 "theme_name", "parent_theme"
             ]:
-                action = "required; missing values stop the run"
+                action = "required; missing or duplicate values stop the run"
+            elif column in numeric_columns.get(name, set()):
+                action = "invalid numeric values converted to null; source nulls kept"
+            elif column == "has_minifigs":
+                action = "derived from num_minifigs when known; otherwise parsed"
             else:
-                action = "kept null unless derived from a known count"
+                action = "source nulls kept unless derived"
 
-            print(f"{column}: {count} missing — {action}")
+            print(
+                f"{column}: {missing_before} missing in source, "
+                f"{missing_after} null after cleaning — {action}"
+            )

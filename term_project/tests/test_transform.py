@@ -11,6 +11,7 @@ from transform import (
     add_decade,
     clean_minifig_flag,
     fill_missing_names,
+    print_quality_summary,
 )
 
 
@@ -116,3 +117,19 @@ def test_fill_missing_names():
     result = fill_missing_names(df)
 
     assert result["name"].tolist() == ["Unknown", "Death Star"]
+
+
+def test_quality_summary_reports_values_coerced_to_null(capsys):
+    original = pd.DataFrame({
+        "name": [None, "Set"],
+        "num_parts": ["invalid", "7"],
+    })
+    cleaned = fill_missing_names(
+        clean_integer_columns(original, ["num_parts"])
+    )
+
+    print_quality_summary({"sets": original}, {"sets": cleaned})
+
+    output = capsys.readouterr().out
+    assert "name: 1 missing in source, 0 null after cleaning" in output
+    assert "num_parts: 0 missing in source, 1 null after cleaning" in output
