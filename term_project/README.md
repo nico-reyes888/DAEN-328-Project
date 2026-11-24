@@ -62,7 +62,7 @@ Sets join to `theme_groups` on both `theme_name` and `parent_theme`. Joining
 directly to `themes` can duplicate sets because theme names can occur under
 multiple theme IDs.
 
-![PostgreSQL entity relationship diagram](lego_erd.png)
+![PostgreSQL entity relationship diagram](screenshots/lego_erd.png)
 
 The ETL pipeline also creates an `etl_runs` table for operational metadata;
 it is not shown in the ERD.
